@@ -30,7 +30,7 @@ min_joystick_pos = 10
 def check_x():
     if controller.axis4.position() > min_joystick_pos:
         x_motor.spin(FORWARD)
-    elif controller.axis4.position() > min_joystick_pos:
+    elif controller.axis4.position() < -min_joystick_pos:
         x_motor.spin(REVERSE)
     else:
         x_motor.stop()
@@ -39,7 +39,7 @@ def check_x():
 def check_y():
     if controller.axis3.position() > min_joystick_pos:
         y_motor.spin(FORWARD)
-    elif controller.axis3.position() > min_joystick_pos:
+    elif controller.axis3.position() < -min_joystick_pos:
         y_motor.spin(REVERSE)
     else:
         y_motor.stop()
@@ -48,18 +48,18 @@ def check_y():
 max_countdown = 5
 # Give countdown before starting
 def initiate():
-    for i in range(countdown, 0):
+    for i in range(max_countdown, 0):
         brain.screen.clear_screen()
         brain.screen.print("Starting in " + i + "...")
         wait(1)
-    brain.clear_screen()
+    brain.screen.clear_screen()
     control()
 # Run checks every 20ms
 def control():
     while True:
         check_x()
         check_y()
-        wait(20, MSEC)
+        wait(5, MSEC)
     
     
 initiate()
