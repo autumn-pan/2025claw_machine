@@ -1,3 +1,39 @@
+#region VEXcode Generated Robot Configuration
+from vex import *
+import urandom
+
+# Brain should be defined by default
+brain=Brain()
+
+# Robot configuration code
+
+
+# wait for rotation sensor to fully initialize
+wait(30, MSEC)
+
+
+# Make random actually random
+def initializeRandomSeed():
+    wait(100, MSEC)
+    random = brain.battery.voltage(MV) + brain.battery.current(CurrentUnits.AMP) * 100 + brain.timer.system_high_res()
+    urandom.seed(int(random))
+      
+# Set random seed 
+initializeRandomSeed()
+
+
+def play_vexcode_sound(sound_name):
+    # Helper to make playing sounds from the V5 in VEXcode easier and
+    # keeps the code cleaner by making it clear what is happening.
+    print("VEXPlaySound:" + sound_name)
+    wait(5, MSEC)
+
+# add a small delay to make sure we don't print in the middle of the REPL header
+wait(200, MSEC)
+# clear the console to make sure we don't have the REPL in the console
+print("\033[2J")
+
+#endregion VEXcode Generated Robot Configuration
 # ---------------------------------------------------------------------------- #
 #                                                                              #
 # 	Module:       main.py                                                      #
@@ -15,52 +51,122 @@ brain=Brain()
 # Initialize controller
 controller = Controller()
 
+# Motor speed
+x_speed = 0
+y_speed = 0
+variable_speed = True
 
+# Reset claw position
+x_reset = False
+y_reset = False
+
+force_halt = False
 # Control functions
 
 # The claw itself is moved in in the xy plane by two axes, and can be moved vertically.
 # Each axis needs its own motor, which will be referred to by its corresponding axis.
 
 x_motor = Motor(Ports.PORT1)
-y_motor = Motor(Ports.PORT2)
-z_motor = Motor(Ports.PORT3)
+y_motor = Motor(Ports.PORT3)
 
 min_joystick_pos = 10
+
+
 # Each tick, check the joystick.
 def check_x():
-    if controller.axis4.position() > min_joystick_pos:
+    if controller.axis4.position() > min_joystick_pos and not force_halt:
+        x_motor.spin(FORWARD, x_speed)
+    elif controller.axis4.position() < -min_joystick_pos and not force_halt:
+        x_motor.spin(REVERSE, x_speed)
+    elif x_reset and not force_halt:
         x_motor.spin(FORWARD)
-    elif controller.axis4.position() < -min_joystick_pos:
-        x_motor.spin(REVERSE)
     else:
         x_motor.stop()
 
-
 def check_y():
-    if controller.axis3.position() > min_joystick_pos:
+    if controller.axis3.position() > min_joystick_pos and not force_halt:
+        y_motor.spin(FORWARD,y_speed)
+    elif controller.axis3.position() < -min_joystick_pos and not force_halt:
+        y_motor.spin(REVERSE,y_speed)
+    elif y_reset and not force_halt:
         y_motor.spin(FORWARD)
-    elif controller.axis3.position() < -min_joystick_pos:
-        y_motor.spin(REVERSE)
     else:
         y_motor.stop()
         
-# How long the initiation countain lasts
-max_countdown = 5
-# Give countdown before starting
-def initiate():
-    for i in range(max_countdown, 0):
-        brain.screen.clear_screen()
-        brain.screen.print("Starting in " + i + "...")
-        wait(1)
+
+def set_speed():
+    global x_speed
+    global y_speed
+
+    x_speed = abs(controller.axis4.position())
+    y_speed = abs(controller.axis3.position())
+
+
+def x_is_at_edge():
+    if x_motor.torque() > 0.5:
+        return True
+    else:
+        return False
+
+def y_is_at_edge():
+    if y_motor.torque() > 0.5:
+        return True
+    else:
+        return False
+
+def safety():
+    global force_halt
+    global x_reset
+    global y_reset
+
+    if y_is_at_edge() or x_is_at_edge():
+        force_halt = True
+        x_reset = False
+        y_reset = False
+
+def reset():
+    global x_reset
+    global y_reset\
+
+    x_reset = True
+    y_reset = True
+
+
+controller.buttonA.pressed(reset)
+
+time = 3000
+def timer():
+    global time
+
+    seconds = mod(time, 100) 
+
+    time -= 1
     brain.screen.clear_screen()
-    control()
-# Run checks every 20ms
+    if seconds > 0:
+        brain.screen.print(f"Time: {seconds:02d}")
+        if seconds < 6:
+            controller.rumble('.')
+
+    else:
+        brain.screen.print("Time's up!")
+        controller.rumble('---')
+
+# Run checks every 10ms
 def control():
     while True:
         check_x()
         check_y()
-        wait(5, MSEC)
+
+        safety()
+        timer()
+
+        if variable_speed:
+            set_speed()
+
+        wait(10, MSEC)
+
+        
     
     
-initiate()
+control()
         
