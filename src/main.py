@@ -1,3 +1,4 @@
+
 #region VEXcode Generated Robot Configuration
 from vex import *
 import urandom
@@ -61,6 +62,8 @@ variable_speed = True
 x_reset = False
 y_reset = False
 
+
+
 force_halt = False
 # Control functions
 
@@ -71,6 +74,9 @@ x_motor = Motor(Ports.PORT1)
 y_motor = Motor(Ports.PORT2)
 z_motor = Motor(Ports.PORT3)
 claw_motor = Motor(Ports.PORT4)
+
+claw_motor.set_velocity(127, RPM)
+
 
 phase_shift = 0
 
@@ -96,18 +102,27 @@ def set_claw_angle():
     x = controller.axis1.position()
     y = controller.axis2.position()
     angle = -1
-    if get_joystick_r_abs() > 20:
-        if y == 0:
-            if x < 0:
-                angle = 180
-            elif x > 0:
-                angle = 0
-            else:
-                angle = -1
+    if get_joystick_r_abs() > 10:
+        if x == 0:
+            if y < 0:
+                angle = -90
+            elif y > 0:
+                angle = 90
+
         else:
-            angle = math.atan(y/x)
+            angle = (180/math.pi)*math.atan(y/x)
+    if (x > 0 and y > 0):
+        claw_motor.spin_to_position(angle,(DEGREES))
+    if (x < 0 and y > 0):
+        claw_motor.spin_to_position(180+angle,(DEGREES))
     
-    claw_motor.set_position(angle,(DEGREES + phase_shift))
+    if(x < 0 and y < 0):
+            claw_motor.spin_to_position(180+angle,(DEGREES))
+    if(x > 0 and y < 0):
+            claw_motor.spin_to_position(360+angle,(DEGREES))
+
+
+
     
     
 def calibrate_phase_shift():
@@ -188,13 +203,13 @@ def timer():
     time -= 1
     brain.screen.clear_screen()
     if seconds > 0:
-        brain.screen.print(f"Time: {seconds:02d}")
+        brain.screen.print(seconds)
         if seconds < 6:
             controller.rumble('.')
 
     else:
         brain.screen.print("Time's up!")
-        controller.rumble('---')
+        controller.rumble('...')
 
 # Run checks every 10ms
 def control():
@@ -206,7 +221,6 @@ def control():
         calibrate_phase_shift()
 
         safety()
-        timer()
 
         if variable_speed:
             set_speed()
