@@ -54,6 +54,7 @@ controller = Controller()
 # Motor speed
 x_speed = 0
 y_speed = 0
+
 variable_speed = True
 
 # Reset claw position
@@ -67,10 +68,54 @@ force_halt = False
 # Each axis needs its own motor, which will be referred to by its corresponding axis.
 
 x_motor = Motor(Ports.PORT1)
-y_motor = Motor(Ports.PORT3)
+y_motor = Motor(Ports.PORT2)
+z_motor = Motor(Ports.PORT3)
+claw_motor = Motor(Ports.PORT4)
+
+phase_shift = 0
+
+def check_z():
+    if controller.buttonR1.pressing():
+        z_motor.spin(FORWARD)
+    elif controller.buttonR2.pressing():
+        z_motor.spin(REVERSE)
+    else:
+        z_motor.stop()
 
 min_joystick_pos = 10
 
+
+
+def get_joystick_r_abs():
+    return (controller.axis1.position()**2 + controller.axis2.position()**2)**0.5
+
+
+def set_claw_angle():
+    global phase_shift
+
+    x = controller.axis1.position()
+    y = controller.axis2.position()
+    angle = -1
+    if get_joystick_r_abs() > 20:
+        if y == 0:
+            if x < 0:
+                angle = 180
+            elif x > 0:
+                angle = 0
+            else:
+                angle = -1
+        else:
+            angle = math.atan(y/x)
+    
+    claw_motor.set_position(angle,(DEGREES + phase_shift))
+    
+    
+def calibrate_phase_shift():
+    global phase_shift
+    if controller.buttonLeft.pressing():
+        phase_shift -= 0.1
+    if controller.buttonRight.pressing():
+        phase_shift += 0.1
 
 # Each tick, check the joystick.
 def check_x():
@@ -138,7 +183,7 @@ time = 3000
 def timer():
     global time
 
-    seconds = mod(time, 100) 
+    seconds = time / 100 
 
     time -= 1
     brain.screen.clear_screen()
@@ -156,6 +201,9 @@ def control():
     while True:
         check_x()
         check_y()
+        
+        set_claw_angle()
+        calibrate_phase_shift()
 
         safety()
         timer()
@@ -169,4 +217,3 @@ def control():
     
     
 control()
-        
