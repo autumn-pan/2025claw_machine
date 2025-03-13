@@ -96,31 +96,31 @@ def get_joystick_r_abs():
     return (controller.axis1.position()**2 + controller.axis2.position()**2)**0.5
 
 
+motor = vex.Motor(vex.Ports.PORT1)
+joystick = vex.Joystick()
+
+previous_angle = 0
+current_rotation = 0
+
 def set_claw_angle():
-    global phase_shift
+    global previous_angle, current_rotation
 
-    x = controller.axis1.position()
-    y = controller.axis2.position()
-    angle = -1
-    if get_joystick_r_abs() > 10:
-        if x == 0:
-            if y < 0:
-                angle = -90
-            elif y > 0:
-                angle = 90
+    x_pos = controller.axis3.position()
+    y_pos = controller.axis4.position()
 
-        else:
-            angle = (180/math.pi)*math.atan(y/x)
-    if (x > 0 and y > 0):
-        claw_motor.spin_to_position(angle,(DEGREES))
-    if (x < 0 and y > 0):
-        claw_motor.spin_to_position(180+angle,(DEGREES))
-    
-    if(x < 0 and y < 0):
-            claw_motor.spin_to_position(180+angle,(DEGREES))
-    if(x > 0 and y < 0):
-            claw_motor.spin_to_position(360+angle,(DEGREES))
+    current_angle_rad = math.atan2(y_pos, x_pos)
+    current_angle_deg = math.degrees(current_angle_rad)
 
+    angle_diff = current_angle_deg - previous_angle
+
+    if angle_diff > 180:
+        angle_diff -= 360
+    elif angle_diff < -180:
+        angle_diff += 360
+    current_rotation += angle_diff
+    claw_motor.spin_to_position(current_rotation)
+
+    previous_angle = current_angle_deg
 
 
     
