@@ -96,9 +96,6 @@ def get_joystick_r_abs():
     return (controller.axis1.position()**2 + controller.axis2.position()**2)**0.5
 
 
-motor = vex.Motor(vex.Ports.PORT1)
-joystick = vex.Joystick()
-
 previous_angle = 0
 current_rotation = 0
 
