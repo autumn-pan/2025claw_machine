@@ -171,9 +171,11 @@ def reset():
 
 previous_angle = 0
 current_rotation = 0
+phase_shift = 0
+
 
 def set_claw_angle():
-    global previous_angle, current_rotation
+    global previous_angle, current_rotation, phase_shift
 
     x_pos = controller.axis3.position()
     y_pos = controller.axis4.position()
@@ -181,14 +183,15 @@ def set_claw_angle():
     current_angle_rad = math.atan2(y_pos, x_pos)
     current_angle_deg = math.degrees(current_angle_rad)
 
-    angle_diff = current_angle_deg - previous_angle
+    angle_diff =  math.degrees(current_angle_rad) - previous_angle
 
     if angle_diff > 180:
-        angle_diff -= 360
+        phase_shift += angle_diff
     elif angle_diff < -180:
-        angle_diff += 360
+        phase_shift -= angle_diff
+
     current_rotation += angle_diff
-    claw_motor.spin_to_position(current_rotation)
+    claw_motor.spin_to_position(current_rotation + phase_shift)
 
     previous_angle = current_angle_deg
 
