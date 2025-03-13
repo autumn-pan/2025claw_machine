@@ -64,7 +64,9 @@ y_reset = False
 
 
 
-force_halt = False
+x_force_halt = False
+y_force_halt = False
+
 # Control functions
 
 # The claw itself is moved in in the xy plane by two axes, and can be moved vertically.
@@ -81,10 +83,10 @@ claw_motor.set_velocity(127, RPM)
 phase_shift = 0
 
 def check_z():
-    if controller.buttonR1.pressing():
-        z_motor.spin(FORWARD)
-    elif controller.buttonR2.pressing():
-        z_motor.spin(REVERSE)
+    if controller.axis3.position() > 10:
+        z_motor.spin(REVERSE, controller.axis3.position())
+    elif controller.axis3.position() < -10:
+        z_motor.spin(REVERSE, controller.axis3.position())
     else:
         z_motor.stop()
 
@@ -94,6 +96,77 @@ min_joystick_pos = 10
 
 def get_joystick_r_abs():
     return (controller.axis1.position()**2 + controller.axis2.position()**2)**0.5
+
+    
+def calibrate_phase_shift():
+    global phase_shift
+    if controller.buttonLeft.pressing():
+        phase_shift -= 0.1
+    if controller.buttonRight.pressing():
+        phase_shift += 0.1
+
+# Each tick, check the joystick.
+def check_x():
+    global x_force_halt
+    global y_force_halt
+    
+    if controller.axis4.position() > min_joystick_pos and not (x_force_halt or y_force_halt):
+        x_motor.spin(FORWARD, x_speed)
+    elif controller.axis4.position() < -min_joystick_pos and not (x_force_halt or y_force_halt):
+        x_motor.spin(REVERSE, x_speed)
+    elif x_reset and not (x_force_halt or y_force_halt):
+        x_motor.spin(FORWARD)
+    else:
+        x_motor.stop()
+    if x_force_halt and controller.axis4.position() == 0:
+        x_force_halt = False
+
+def check_y():
+    global x_force_halt
+    global y_force_halt
+
+    if controller.axis4.position() > min_joystick_pos and not (x_force_halt or y_force_halt):
+        y_motor.spin(REVERSE,y_speed)
+    elif controller.axis4.position() < -min_joystick_pos and not (x_force_halt or y_force_halt):
+        y_motor.spin(FORWARD,y_speed)
+    elif y_reset and not (x_force_halt or y_force_halt):
+        y_motor.spin(REVERSE)
+    else:
+        y_motor.stop()
+    if (y_force_halt) and controller.axis4.position() == 0:
+        y_force_halt = False
+
+def set_speed():
+    global x_speed
+    global y_speed
+
+    x_speed = abs(controller.axis4.position())
+    y_speed = abs(controller.axis4.position())
+
+
+def x_is_at_edge():
+    if x_motor.torque() > 0.5:
+        return True
+    else:
+        return False
+
+def y_is_at_edge():
+    if y_motor.torque() > 0.95:
+        return True
+    else:
+        return False
+
+
+
+def reset():
+    global x_reset
+    global y_reset
+
+    x_reset = True
+    y_reset = True
+
+
+# controller.buttonA.pressed(reset)
 
 
 previous_angle = 0
@@ -120,77 +193,6 @@ def set_claw_angle():
     previous_angle = current_angle_deg
 
 
-    
-    
-def calibrate_phase_shift():
-    global phase_shift
-    if controller.buttonLeft.pressing():
-        phase_shift -= 0.1
-    if controller.buttonRight.pressing():
-        phase_shift += 0.1
-
-# Each tick, check the joystick.
-def check_x():
-    if controller.axis4.position() > min_joystick_pos and not force_halt:
-        x_motor.spin(FORWARD, x_speed)
-    elif controller.axis4.position() < -min_joystick_pos and not force_halt:
-        x_motor.spin(REVERSE, x_speed)
-    elif x_reset and not force_halt:
-        x_motor.spin(FORWARD)
-    else:
-        x_motor.stop()
-
-def check_y():
-    if controller.axis3.position() > min_joystick_pos and not force_halt:
-        y_motor.spin(FORWARD,y_speed)
-    elif controller.axis3.position() < -min_joystick_pos and not force_halt:
-        y_motor.spin(REVERSE,y_speed)
-    elif y_reset and not force_halt:
-        y_motor.spin(FORWARD)
-    else:
-        y_motor.stop()
-        
-
-def set_speed():
-    global x_speed
-    global y_speed
-
-    x_speed = abs(controller.axis4.position())
-    y_speed = abs(controller.axis3.position())
-
-
-def x_is_at_edge():
-    if x_motor.torque() > 0.5:
-        return True
-    else:
-        return False
-
-def y_is_at_edge():
-    if y_motor.torque() > 0.5:
-        return True
-    else:
-        return False
-
-def safety():
-    global force_halt
-    global x_reset
-    global y_reset
-
-    if y_is_at_edge() or x_is_at_edge():
-        force_halt = True
-        x_reset = False
-        y_reset = False
-
-def reset():
-    global x_reset
-    global y_reset\
-
-    x_reset = True
-    y_reset = True
-
-
-controller.buttonA.pressed(reset)
-
 time = 3000
 def timer():
     global time
@@ -213,16 +215,14 @@ def control():
     while True:
         check_x()
         check_y()
-        
+        check_z()
         set_claw_angle()
         calibrate_phase_shift()
-
-        safety()
 
         if variable_speed:
             set_speed()
 
-        wait(10, MSEC)
+        wait(6.9, MSEC)
 
         
     
