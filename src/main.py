@@ -62,19 +62,22 @@ variable_speed = True
 x_reset = False
 y_reset = False
 
-
-
 x_force_halt = False
 y_force_halt = False
+z_force_halt = False
+def safety():
+    global z_force_halt
+    if(z_motor.torque() > 1):
+        z_force_halt = True
 
-# Control functions
 
-# The claw itself is moved in in the xy plane by two axes, and can be moved vertically.
-# Each axis needs its own motor, which will be referred to by its corresponding axis.
+
 
 x_motor = Motor(Ports.PORT1)
 y_motor = Motor(Ports.PORT2)
 z_motor = Motor(Ports.PORT3)
+
+skibidi_rizzler = Motor(Ports.PORT10)
 claw_motor = Motor(Ports.PORT4)
 
 claw_motor.set_velocity(127, RPM)
@@ -82,13 +85,28 @@ claw_motor.set_velocity(127, RPM)
 
 phase_shift = 0
 
+def ligma():
+    if controller.buttonR1.pressing():
+        skibidi_rizzler.spin(FORWARD)
+    elif controller.buttonR2.pressing():
+        skibidi_rizzler.spin(REVERSE)
+    else:
+        skibidi_rizzler.stop()
+
+# figure it out
+
 def check_z():
-    if controller.axis3.position() > 10:
-        z_motor.spin(REVERSE, controller.axis3.position())
-    elif controller.axis3.position() < -10:
-        z_motor.spin(REVERSE, controller.axis3.position())
+    global z_force_halt
+
+    if controller.axis3.position() > 10 and not z_force_halt:
+        z_motor.spin(FORWARD, controller.axis3.position())
+    elif controller.axis3.position() < -10 and not z_force_halt:
+        z_motor.spin(FORWARD, controller.axis3.position())
     else:
         z_motor.stop()
+
+    if controller.axis3.position() == 0 and z_force_halt:
+       z_force_halt = False
 
 min_joystick_pos = 10
 
@@ -169,31 +187,20 @@ def reset():
 # controller.buttonA.pressed(reset)
 
 
-previous_angle = 0
-current_rotation = 0
 phase_shift = 0
 
 
 def set_claw_angle():
-    global previous_angle, current_rotation, phase_shift
+    global phase_shift
 
-    x_pos = controller.axis3.position()
-    y_pos = controller.axis4.position()
+    if controller.axis1.position() > 10:
+        claw_motor.spin(FORWARD, 20)
+    elif controller.axis1.position() < -10:
+        claw_motor.spin(REVERSE, 20)
+    else:
+        claw_motor.stop()
 
-    current_angle_rad = math.atan2(y_pos, x_pos)
-    current_angle_deg = math.degrees(current_angle_rad)
 
-    angle_diff =  math.degrees(current_angle_rad) - previous_angle
-
-    if angle_diff > 180:
-        phase_shift += angle_diff
-    elif angle_diff < -180:
-        phase_shift -= angle_diff
-
-    current_rotation += angle_diff
-    claw_motor.spin_to_position(current_rotation + phase_shift)
-
-    previous_angle = current_angle_deg
 
 
 time = 3000
@@ -219,13 +226,18 @@ def control():
         check_x()
         check_y()
         check_z()
+
+        ligma()
+        
+        safety()
+
         set_claw_angle()
         calibrate_phase_shift()
 
         if variable_speed:
             set_speed()
 
-        wait(6.9, MSEC)
+        wait(6.942, MSEC)
 
         
     
