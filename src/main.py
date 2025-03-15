@@ -61,7 +61,7 @@ variable_speed = True
 # Reset claw position
 x_reset = False
 y_reset = False
-
+game = False
 x_force_halt = False
 y_force_halt = False
 z_force_halt = False
@@ -203,16 +203,16 @@ def set_claw_angle():
 
 
 
-time = 3000
+time = 30000
 def timer():
     global time
 
-    seconds = time / 100 
+    seconds = time / 1000 
 
-    time -= 1
+    time -= 6.9
     brain.screen.clear_screen()
+
     if seconds > 0:
-        brain.screen.print(seconds)
         if seconds < 6:
             controller.rumble('.')
 
@@ -220,11 +220,16 @@ def timer():
         brain.screen.print("Time's up!")
         controller.rumble('...')
         wait(3, SEC)
-        quit()
+        game = False
+
+def play():
+    game = True
+
+controller.buttonA.pressed(play)
 
 # Run checks every 10ms
 def control():
-    while True:
+    while game:
         check_x()
         check_y()
         check_z()
