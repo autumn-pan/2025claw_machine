@@ -219,6 +219,8 @@ def timer():
     else:
         brain.screen.print("Time's up!")
         controller.rumble('...')
+        wait(3, SEC)
+        quit()
 
 # Run checks every 10ms
 def control():
@@ -231,6 +233,9 @@ def control():
         
         safety()
 
+
+        timer()
+        
         set_claw_angle()
         calibrate_phase_shift()
 
